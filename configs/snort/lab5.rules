@@ -1,0 +1,5 @@
+# Lab 5 - ICMP connectivity detection
+# Kali Linux: 192.168.152.10
+# Ubuntu Snort: 192.168.152.20
+
+alert icmp 192.168.152.10 any -> 192.168.152.20 any (msg:"LAB5 - ICMP Ping Detected"; itype:8; sid:1000101; rev:1;)
