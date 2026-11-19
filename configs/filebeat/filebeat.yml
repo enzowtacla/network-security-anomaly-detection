@@ -1,0 +1,20 @@
+# Lab 5 Snort alert forwarding with Filebeat 9.5.6
+
+filebeat.inputs:
+  - type: filestream
+    id: snort-lab5
+    enabled: true
+    paths:
+      - /var/log/lab5/snort-collected.log
+
+output.elasticsearch:
+  hosts: ["https://192.168.56.1:9200"]
+  preset: balanced
+
+  username: "${ES_USERNAME}"
+  password: "${ES_PASSWORD}"
+
+  ssl.certificate_authorities:
+    - "/etc/filebeat/certs/http_ca.crt"
+
+  ssl.verification_mode: certificate
