@@ -1,0 +1,15 @@
+# Lab 5 Ubuntu-snort network configuration
+network:
+  version: 2
+  ethernets:
+    enp0s3:
+      dhcp4: true
+
+    enp0s8:
+      addresses:
+        - "192.168.152.130/24"
+
+    enp0s9:
+      dhcp4: false
+      addresses:
+        - "192.168.56.20/24"
