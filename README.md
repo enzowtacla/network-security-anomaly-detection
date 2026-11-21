@@ -243,8 +243,8 @@ A systemd user timer executes the monitor approximately every 30 seconds.
 - Python alert monitor: `scripts/telegram_alert_monitor.py`
 - systemd service: `configs/systemd/lab5-telegram-monitor.service`
 - systemd timer: `configs/systemd/lab5-telegram-monitor.timer`
-- Local configuration: `scripts/.env` (not tracked by Git)
-- Notification state: `scripts/.telegram_alert_state.json` (not tracked by Git)
+- Local configuration: `scripts/.env`
+- Notification state: `scripts/.telegram_alert_state.json`
 
 ### Validation
 
