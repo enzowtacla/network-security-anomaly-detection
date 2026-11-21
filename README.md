@@ -4,7 +4,7 @@ This project was developed as part of Lab 5 at ESIGELEC. The main objective was 
 
 The system uses Snort for network traffic detection, syslog-ng and Filebeat for log collection and forwarding, and Elasticsearch and Kibana for storing and visualizing security events.
 
-To evaluate the setup, different types of network traffic were generated from Kali Linux. Five scenarios were tested, covering ICMP, TCP port scanning, SSH and FTP connection anomalies, and UDP traffic.
+To evaluate the setup, different types of network traffic were generated from Kali Linux. Five scenarios were tested: elevated ICMP traffic, TCP port scanning, repeated SSH and FTP connection attempts, and elevated UDP traffic to port 9999.
 
 All five scenarios produced the expected alerts, which were successfully collected and indexed in Elasticsearch.
 
@@ -68,15 +68,17 @@ Five detection scenarios were configured to evaluate the monitoring system. Each
 
 In addition to checking whether Snort could identify the traffic, each test also verified that the generated alerts were correctly forwarded to Elasticsearch.
 
-### Scenario 01: ICMP Ping Detection
+### Scenario 01: ICMP Flood Detection
 
-The first scenario focused on ICMP traffic. Ping requests were sent from Kali Linux to the Ubuntu machine at `192.168.152.130`.
+The first scenario examined whether Snort could identify a short burst of ICMP echo requests from Kali Linux to Ubuntu at `192.168.152.130`.
 
-A custom Snort rule with SID `1000002` was configured to detect ICMP echo requests and generate the alert message `Someone is pinging`.
+Rule `1000002`, revision 2, used `detection_filter` to identify traffic exceeding 20 matching packets from one source within 10 seconds. We generated 30 requests using `ping -c 30 -i 0.2 192.168.152.130`.
 
-The traffic was detected as expected, and the corresponding alerts were found in Elasticsearch.
+Snort generated the alert `Possible ICMP Flood Detected`. Events with the identifier `1:1000002:2` were also retrieved from Elasticsearch with the expected source, destination, and protocol fields.
 
-This initial test confirmed that Snort was monitoring the network interface correctly and that the log collection process was functioning.
+The test confirmed threshold-based detection of elevated ICMP traffic. It did not attempt to make the target unavailable.
+
+[Scenario 01 procedure and evidence](scenarios/scenario-01/README.md)
 
 ### Scenario 02: TCP Port Scanning
 
@@ -108,15 +110,17 @@ The rule generated the expected alerts, which were successfully forwarded to Ela
 
 As with the SSH scenario, the detection focuses on repeated connection attempts. It does not analyze FTP login failures or confirm that an authentication attack occurred.
 
-### Scenario 05: UDP Traffic Detection
+### Scenario 05: UDP Flood Detection
 
-The final scenario focused on UDP traffic.
+The final scenario examined repeated UDP traffic sent from Kali Linux to port 9999 on Ubuntu.
 
-A UDP packet was sent from Kali Linux to port 9999 on the Ubuntu machine. A custom Snort rule with SID `1000007` was configured to identify this traffic.
+Rule `1000007`, revision 2, used `detection_filter` to identify more than 20 matching packets from the same source within 10 seconds. We generated 30 short UDP messages using a shell loop and `nc`.
 
-Snort detected the packet and generated an alert, which was later found in Elasticsearch.
+Snort produced two alerts with identifier `1:1000007:2` and the message `Possible UDP Flood Detected`. The alerts showed the expected source and destination addresses and destination port 9999.
 
-This scenario was mainly used to verify UDP traffic detection. It does not simulate a specific intrusion technique.
+This test demonstrated detection of an elevated UDP packet rate in the laboratory. It did not demonstrate an actual denial of service.
+
+[Scenario 05 procedure and evidence](scenarios/scenario-05/README.md)
 
 ## 4. Log Collection and Processing
 
@@ -180,11 +184,11 @@ The `configs/` directory contains the configuration files for Snort, syslog-ng, 
 
 The `dashboards/` directory stores the Kibana dashboard export, while `scenarios/` contains documentation for the five detection scenarios.
 
-Screenshots of the tests and dashboard are stored in `docs/screenshots/`, and additional scripts are available in `scripts/`.
+Screenshots of the tests and dashboard are stored in `docs/screenshots/`, and the `scripts/` directory is reserved for supporting scripts.
 
-The repository also includes documentation covering Filebeat and Elasticsearch integration, along with individual files for the ICMP, TCP scan, SSH, FTP, and UDP tests.
+The repository also includes documentation covering Filebeat and Elasticsearch integration, along with individual files for the ICMP, TCP scan, SSH, FTP, and UDP scenarios.
 
-More detailed installation instructions, testing procedures, and results analysis are planned as separate documents.
+The [installation guide](docs/installation-guide.md), [testing guide](docs/testing-guide.md), and [results and limitations](docs/results-and-limitations.md) describe the configuration, test procedures, and findings. Each scenario also has its own README with screenshots.
 
 ## 7. Results
 
@@ -192,7 +196,7 @@ All five detection scenarios produced the expected results.
 
 Snort detected the generated traffic according to the configured rules, and the corresponding alerts were found in Elasticsearch.
 
-The TCP port scanning test generated 81 alerts. The SSH and FTP scenarios demonstrated that threshold-based rules could identify repeated TCP connection attempts, while the ICMP and UDP tests confirmed that the system could detect those protocols using custom rules.
+The TCP port scanning test generated 81 alerts. The SSH and FTP scenarios demonstrated threshold-based detection of repeated TCP connection attempts. The updated ICMP rule generated alerts for a short burst of echo requests, and the updated UDP rule generated two alerts for a controlled burst of packets to port 9999.
 
 The log processing configuration also worked as expected. The Elasticsearch ingest pipeline extracted structured information from the alerts, allowing the events to be filtered and analyzed in Kibana.
 
@@ -208,7 +212,7 @@ Another limitation is the simplicity of some detection rules. Certain network pa
 
 For example, repeated SYN packets to SSH or FTP ports can suggest unusual connection behavior, but they do not confirm that a brute-force attack is taking place. Detecting authentication attacks more accurately would require additional rules or analysis of authentication logs.
 
-The UDP scenario also focuses on detecting a specific type of traffic rather than identifying a known attack technique.
+The ICMP and UDP flood rules identify elevated packet rates, but the tests did not measure service disruption or confirm malicious intent.
 
 Future improvements could include more precise detection rules, automatic notifications for important events, and additional scenarios involving other network protocols.
 

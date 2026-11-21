@@ -2,11 +2,11 @@
 
 ## 1. Objective
 
-This guide describes the tests performed to evaluate the network security monitoring system developed for Lab.
+This guide describes the tests performed to evaluate the network security monitoring system developed for Lab 5.
 
 Kali Linux was used to generate controlled network traffic, while Snort monitored the packets using custom detection rules. After each test, the generated alerts were checked to confirm that they had been collected and indexed in Elasticsearch.
 
-Five scenarios were tested, covering ICMP traffic, TCP port scanning, repeated SSH and FTP connection attempts, and UDP traffic. All five produced the expected alerts.
+Five scenarios were tested: elevated ICMP traffic, TCP port scanning, repeated SSH and FTP connection attempts, and elevated UDP traffic. All five produced the expected Snort alerts.
 
 ## 2. Test Environment
 
@@ -30,31 +30,35 @@ ps aux | grep '[s]nort'
 
 Once the services are active and Snort is monitoring the laboratory interface, the detection tests can begin.
 
-## 3. Scenario 1: ICMP Ping Detection
+## 3. Scenario 1: ICMP Flood Detection
 
-The first scenario checks whether Snort can detect ICMP echo requests sent to the Ubuntu machine.
+The first scenario checks whether Snort can identify a short burst of ICMP echo requests that exceeds a configured packet-rate threshold.
 
-From Kali Linux, the following command sends five ping requests to the target:
+From Kali Linux, the following command sends 30 requests at intervals of 0.2 seconds:
 
 ```bash
-ping -c 5 192.168.152.130
+ping -c 30 -i 0.2 192.168.152.130
 ```
 
-Snort rule `1000002` was configured to detect this traffic and generate the message:
+Snort rule `1000002`, revision 2, matches ICMP echo requests and uses `detection_filter:track by_src, count 20, seconds 10` to detect elevated traffic from one source.
+
+The expected alert message is:
 
 ```text
-Someone is pinging
+Possible ICMP Flood Detected
 ```
 
-After running the command, the alerts can be checked directly in the Snort log file on Ubuntu:
+After running the test, the alerts can be checked on Ubuntu:
 
 ```bash
-sudo grep 'Someone is pinging' /var/log/snort/snort.alert.fast | tail -5
+sudo grep 'Possible ICMP Flood Detected' /var/log/snort/snort.alert.fast | tail -10
 ```
 
-The test produced the expected ICMP alerts. The corresponding events were also found in Elasticsearch, confirming that the traffic was detected and the alerts were forwarded correctly.
+The rule generated multiple alerts with the identifier `[1:1000002:2]`. The corresponding events were also found in Elasticsearch with the alert type, protocol, source IP, and destination IP extracted into separate fields.
 
-*Evidence: Scenario 1*
+The test confirms detection of a short, elevated rate of ICMP traffic. It does not demonstrate a sustained flood or actual service disruption.
+
+*Evidence: [Scenario 1](../scenarios/scenario-01/README.md)*
 
 ## 4. Scenario 2: TCP Port Scanning
 
@@ -146,33 +150,37 @@ As in the SSH scenario, the detection is based on repeated connection attempts r
 
 *Evidence: Scenario 4*
 
-## 7. Scenario 5: UDP Traffic Detection
+## 7. Scenario 5: UDP Flood Detection
 
-The final scenario checks whether Snort can detect UDP traffic sent to a specific destination port.
+The final scenario tests whether Snort can identify a short burst of UDP packets sent to port 9999.
 
-A test message was sent from Kali Linux to UDP port 9999 on the Ubuntu machine:
+Kali Linux was used to send 30 messages to the Ubuntu machine:
 
 ```bash
-echo "LAB5 UDP test" | nc -u -w1 192.168.152.130 9999
+for i in {1..30}; do
+    echo "LAB5 UDP Flood Test $i" | nc -u -w1 192.168.152.130 9999
+done
 ```
 
-Snort rule `1000007` was configured to detect this traffic and generate the following alert:
+Snort rule `1000007`, revision 2, monitors UDP traffic to port 9999. Its `detection_filter` tracks each source IP and triggers when more than 20 matching packets are observed within 10 seconds.
+
+The expected message is:
 
 ```text
-LAB5 UDP Traffic Detected
+Possible UDP Flood Detected
 ```
 
-The alert can be found in the Snort log using:
+The alert can be checked on Ubuntu using:
 
 ```bash
-sudo grep 'LAB5 UDP Traffic Detected' /var/log/snort/snort.alert.fast | tail -5
+sudo grep 'Possible UDP Flood Detected' /var/log/snort/snort.alert.fast | tail -10
 ```
 
-The packet was detected successfully, and the alert was also found in Elasticsearch.
+The test generated two Snort alerts with identifier `[1:1000007:2]`, showing traffic from `192.168.152.131` to `192.168.152.130:9999`.
 
-This scenario verifies that the custom rule can identify UDP traffic matching the configured conditions. It does not represent a specific network attack.
+This was a limited traffic-rate test, not a sustained denial-of-service attack. The number of alerts may vary with packet timing and the way `nc` handles each message.
 
-*Evidence: Scenario 5*
+*Evidence: [Scenario 5](../scenarios/scenario-05/README.md)*
 
 ## 8. Verifying Alerts in Elasticsearch
 
@@ -206,14 +214,14 @@ GET filebeat-*/_search
 
 This query is useful for checking whether the ingest pipeline extracted the expected information from the Snort alerts.
 
-It is also possible to search for events related to a specific scenario. For example, the following query looks for the UDP detection message:
+It is also possible to search for events related to a specific scenario. For example, the following query looks for the updated UDP flood alert:
 
 ```json
 GET filebeat-*/_search
 {
   "query": {
     "match_phrase": {
-      "message": "LAB5 UDP Traffic Detected"
+      "message": "Possible UDP Flood Detected"
     }
   }
 }
@@ -239,14 +247,10 @@ The dashboard configuration is available in the repository at `dashboards/snort-
 
 ## 10. Test Results Summary
 
-All five scenarios produced the expected Snort alerts, and the corresponding events were found in Elasticsearch.
+The five scenarios produced the expected Snort alerts under the conditions used in the laboratory.
 
-The ICMP test confirmed that the system could detect ping requests, while the TCP scanning scenario generated 81 alerts from the Nmap scan.
+The ICMP scenario triggered the packet-rate rule after a short burst of echo requests. The TCP scan generated 81 alerts for the ports scanned by Nmap. The SSH and FTP scenarios triggered threshold-based rules for repeated SYN packets sent to ports 22 and 21. The UDP scenario generated two alerts after a short burst of traffic to port 9999.
 
-The SSH and FTP scenarios showed that threshold-based rules could detect repeated connection attempts to ports 22 and 21. The UDP test also confirmed that traffic directed to port 9999 could be identified using a custom rule.
+The ICMP flood alerts were confirmed in Elasticsearch with structured fields extracted by the ingest pipeline. The other scenarios were also tested through the log collection workflow; the UDP flood evidence should be checked against the latest indexed events when preparing the final submission.
 
-In addition to traffic detection, the tests verified the log collection and processing workflow. The alerts generated by Snort were collected through syslog-ng, forwarded by Filebeat, and processed in Elasticsearch.
-
-The results were also available through the Kibana dashboard, allowing the detected activity to be examined without manually reading the log files.
-
-Overall, the tests confirmed that the monitoring system worked as expected under the conditions used in the laboratory. Although these scenarios do not cover every type of network attack, they provide a practical way to verify the integration between the detection, log collection, and visualization components.
+These results demonstrate the integration between Snort, syslog-ng, Filebeat, Elasticsearch, and Kibana. They do not establish that a denial of service occurred or that the SSH and FTP tests involved authentication attacks.

@@ -44,7 +44,9 @@ Custom detection rules are stored in:
 
 A copy of these rules is also available in the repository at `configs/snort/lab5.rules`.
 
-The rules cover the five detection scenarios used in the project: ICMP ping detection, TCP SYN traffic, repeated connection attempts to SSH and FTP ports, and UDP traffic sent to port 9999.
+For the ICMP and UDP scenarios, the rules use `detection_filter` to report traffic that exceeds 20 matching packets from the same source within 10 seconds. The current rule revisions are `1000002:2` for ICMP and `1000007:2` for UDP. These thresholds were tested with short bursts of traffic in the virtual network; they do not establish that a denial of service occurred.
+
+The rules cover the five detection scenarios used in the project: threshold-based ICMP flood detection, TCP SYN traffic during a port scan, repeated connection attempts to SSH and FTP ports, and threshold-based UDP flood detection on port 9999.
 
 ### 3.1 Validating the Configuration
 

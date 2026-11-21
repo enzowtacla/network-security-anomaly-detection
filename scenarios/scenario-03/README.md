@@ -1,58 +1,55 @@
 # Scenario 03 — SSH Connection Anomaly
 
-## Objective
+## 1. Objective
 
-Detect repeated TCP connection attempts to SSH port 22.
+The third scenario examined repeated TCP SYN connection attempts to port 22, normally used by SSH.
 
-## Test Environment
+The purpose was to check whether the configured Snort rule detected the traffic and whether the alert reached Elasticsearch.
 
-- **Traffic generator:** Kali Linux (`192.168.152.131`)
-- **Detection machine:** Ubuntu Snort (`192.168.152.130`)
-- **Monitoring tools:** Snort, syslog-ng, Filebeat, Elasticsearch, and Kibana
+## 2. Test Environment
 
-## Test Command
+Kali Linux (`192.168.152.131`) generated the traffic. Snort monitored the laboratory network on Ubuntu (`192.168.152.130`). syslog-ng and Filebeat collected and forwarded the alerts to Elasticsearch, where they could be examined using Kibana.
 
-Run the following command on Kali Linux:
+## 3. Test Procedure
+
+The following command was executed on Kali Linux:
 
 ```bash
 for i in {1..8}; do sudo nmap -sS -Pn -p 22 --max-retries 0 192.168.152.130 >/dev/null; done
 ```
 
-## Expected Detection
+Snort rule `1000004` was configured to generate the message:
 
-- **Snort rule ID:** `1000004`
-- **Expected alert:** `Possible SSH Brute Force Attack`
+```text
+Possible SSH Brute Force Attack
+```
 
-## Verification
-
-On Ubuntu, check the Snort alert log:
+On Ubuntu, the alert can be checked using:
 
 ```bash
 sudo grep -F 'Possible SSH Brute Force Attack' /var/log/snort/snort.alert.fast | tail -5
 ```
 
-Then verify that the corresponding event appears in Elasticsearch using Kibana Discover or Dev Tools.
+## 4. Results
 
-## Result
+The configured threshold was reached and Snort generated the expected alert. The corresponding event was indexed in Elasticsearch.
 
-Snort detected the repeated connection attempts, and the alert was indexed in Elasticsearch.
+## 5. Evidence
 
-## Evidence
+### Traffic generated from Kali Linux
 
-### Evidence 1
+![Kali Linux test](../../docs/screenshots/scenario-03-ping-kali.png)
 
-![Scenario 03 evidence 1](../../docs/screenshots/scenario-03-ping-kali.png)
+### Snort alert output
 
-### Evidence 2
+![Snort alert](../../docs/screenshots/scenario-03-snort-alert.png)
 
-![Scenario 03 evidence 2](../../docs/screenshots/scenario-03-snort-alert.png)
+### Kibana / Elasticsearch evidence
 
-### Evidence 3
+![Indexed alert](../../docs/screenshots/scenario-03-ssh-kibana.png)
 
-![Scenario 03 evidence 3](../../docs/screenshots/scenario-03-ssh-kibana.png)
+## 6. Limitations
 
-## Limitations
-
-This scenario does not test password guessing or authentication failures. The rule detects repeated SYN packets.
+The test did not involve password guessing or failed logins. The alert message refers to a possible brute-force attack, but the rule only measures repeated connection attempts.
 
 [Back to the main README](../../README.md)

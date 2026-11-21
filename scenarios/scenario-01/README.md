@@ -1,58 +1,59 @@
-# Scenario 01 — ICMP Ping Detection
+# Scenario 01: ICMP Flood Detection
 
-## Objective
+## 1. Objective
 
-Detect ICMP echo requests sent from Kali Linux to the Ubuntu Snort machine.
+This scenario checks whether Snort can identify a short burst of network traffic that exceeds a configured threshold.
 
-## Test Environment
+Detect a short burst of ICMP echo requests exceeding the configured rate threshold.
 
-- **Traffic generator:** Kali Linux (`192.168.152.131`)
-- **Detection machine:** Ubuntu Snort (`192.168.152.130`)
-- **Monitoring tools:** Snort, syslog-ng, Filebeat, Elasticsearch, and Kibana
+## 2. Test Environment
 
-## Test Command
+Kali Linux (`192.168.152.131`) generated the traffic. Snort monitored the laboratory network on Ubuntu (`192.168.152.130`). Alerts were collected through syslog-ng and Filebeat and sent to Elasticsearch for analysis in Kibana.
 
-Run the following command on Kali Linux:
+## 3. Test Procedure
 
-```bash
-ping -c 5 192.168.152.130
-```
-
-## Expected Detection
-
-- **Snort rule ID:** `1000002`
-- **Expected alert:** `Someone is pinging`
-
-## Verification
-
-On Ubuntu, check the Snort alert log:
+The following command was executed on Kali Linux:
 
 ```bash
-sudo grep -F 'Someone is pinging' /var/log/snort/snort.alert.fast | tail -5
+ping -c 30 -i 0.2 192.168.152.130
 ```
 
-Then verify that the corresponding event appears in Elasticsearch using Kibana Discover or Dev Tools.
+Snort rule `1000002`, revision 2, was configured with `detection_filter:track by_src, count 20, seconds 10`.
 
-## Result
+The expected alert was:
 
-Snort generated ICMP alerts, which were successfully indexed in Elasticsearch.
+```text
+Possible ICMP Flood Detected
+```
 
-## Evidence
+On Ubuntu, the generated alerts can be checked with:
 
-### Evidence 1
+```bash
+sudo grep 'Possible ICMP Flood Detected' /var/log/snort/snort.alert.fast | tail -10
+```
 
-![Scenario 01 evidence 1](../../docs/screenshots/scenario-01-icmp-ping-kali.png)
+## 4. Results
 
-### Evidence 2
+Snort generated multiple alerts with identifier `[1:1000002:2]`. Elasticsearch returned the corresponding events with structured rule, protocol, and IP address fields.
 
-![Scenario 01 evidence 2](../../docs/screenshots/scenario-01-snort-alert.png)
+## 5. Evidence
 
-### Evidence 3
+### Traffic generated from Kali Linux
 
-![Scenario 01 evidence 3](../../docs/screenshots/scenario-01-icmp-kibana.png)
+![Traffic generated from Kali Linux](../../docs/screenshots/scenario-01-icmp-ping-kali.png)
 
-## Limitations
+### Snort alert output
 
-ICMP echo requests are not inherently malicious. This test validates traffic detection and log forwarding.
+![Snort alert output](../../docs/screenshots/scenario-01-snort-alert.png)
+
+### Kibana / Elasticsearch evidence
+
+![Kibana / Elasticsearch evidence](../../docs/screenshots/scenario-01-icmp-kibana.png)
+
+## 6. Limitations
+
+This test detects elevated ICMP traffic over a short period. It does not demonstrate an actual denial of service.
+
+The rule detects matching traffic patterns. An alert alone is not proof of malicious intent.
 
 [Back to the main README](../../README.md)

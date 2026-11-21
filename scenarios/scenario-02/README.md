@@ -1,58 +1,55 @@
 # Scenario 02 — TCP Port Scan Detection
 
-## Objective
+## 1. Objective
 
-Detect TCP SYN packets generated during a scan of ports 20 through 100.
+The second scenario examined TCP SYN packets generated during a port scan of ports 20 through 100 on the Ubuntu machine.
 
-## Test Environment
+The purpose was to check whether the configured Snort rule detected the traffic and whether the alert reached Elasticsearch.
 
-- **Traffic generator:** Kali Linux (`192.168.152.131`)
-- **Detection machine:** Ubuntu Snort (`192.168.152.130`)
-- **Monitoring tools:** Snort, syslog-ng, Filebeat, Elasticsearch, and Kibana
+## 2. Test Environment
 
-## Test Command
+Kali Linux (`192.168.152.131`) generated the traffic. Snort monitored the laboratory network on Ubuntu (`192.168.152.130`). syslog-ng and Filebeat collected and forwarded the alerts to Elasticsearch, where they could be examined using Kibana.
 
-Run the following command on Kali Linux:
+## 3. Test Procedure
+
+The following command was executed on Kali Linux:
 
 ```bash
 sudo nmap -sS -Pn -p 20-100 192.168.152.130
 ```
 
-## Expected Detection
+Snort rule `1000003` was configured to generate the message:
 
-- **Snort rule ID:** `1000003`
-- **Expected alert:** `TCP connection attempt detected`
+```text
+TCP connection attempt detected
+```
 
-## Verification
-
-On Ubuntu, check the Snort alert log:
+On Ubuntu, the alert can be checked using:
 
 ```bash
 sudo grep -F 'TCP connection attempt detected' /var/log/snort/snort.alert.fast | tail -5
 ```
 
-Then verify that the corresponding event appears in Elasticsearch using Kibana Discover or Dev Tools.
+## 4. Results
 
-## Result
+Snort generated 81 alerts, corresponding to the 81 ports scanned with Nmap. The alerts were also indexed in Elasticsearch.
 
-The test generated 81 alerts in Elasticsearch, corresponding to the scanned TCP ports.
+## 5. Evidence
 
-## Evidence
+### Traffic generated from Kali Linux
 
-### Evidence 1
+![Kali Linux test](../../docs/screenshots/scenario-02-ping-kali.png)
 
-![Scenario 02 evidence 1](../../docs/screenshots/scenario-02-ping-kali.png)
+### Snort alert output
 
-### Evidence 2
+![Snort alert](../../docs/screenshots/scenario-02-snort-alert.png)
 
-![Scenario 02 evidence 2](../../docs/screenshots/scenario-02-snort-alert.png)
+### Kibana / Elasticsearch evidence
 
-### Evidence 3
+![Indexed alert](../../docs/screenshots/scenario-02-tcp-kibana.png)
 
-![Scenario 02 evidence 3](../../docs/screenshots/scenario-02-tcp-kibana.png)
+## 6. Limitations
 
-## Limitations
-
-The rule detects individual SYN packets rather than correlating them into a single port-scanning event.
+The rule matches individual SYN packets. It does not correlate packets into a single scan event, so a legitimate connection attempt can also generate an alert.
 
 [Back to the main README](../../README.md)

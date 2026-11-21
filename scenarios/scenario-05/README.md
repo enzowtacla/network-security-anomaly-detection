@@ -1,58 +1,59 @@
-# Scenario 05 — UDP Traffic Detection
+# Scenario 05: UDP Flood Detection
 
-## Objective
+## 1. Objective
 
-Detect UDP traffic sent from Kali Linux to destination port 9999.
+This scenario checks whether Snort can detect a short burst of UDP packets sent to port 9999 when the traffic exceeds the configured rate threshold.
 
-## Test Environment
+## 2. Test Environment
 
-- **Traffic generator:** Kali Linux (`192.168.152.131`)
-- **Detection machine:** Ubuntu Snort (`192.168.152.130`)
-- **Monitoring tools:** Snort, syslog-ng, Filebeat, Elasticsearch, and Kibana
+Kali Linux (`192.168.152.131`) generated the traffic. Snort monitored the laboratory network on Ubuntu (`192.168.152.130`). Alerts were collected through syslog-ng and Filebeat and sent to Elasticsearch for analysis in Kibana.
 
-## Test Command
+## 3. Test Procedure
 
-Run the following command on Kali Linux:
+The following command was executed on Kali Linux:
 
 ```bash
-echo "LAB5 UDP test" | nc -u -w1 192.168.152.130 9999
+for i in {1..30}; do
+    echo "LAB5 UDP Flood Test $i" | nc -u -w1 192.168.152.130 9999
+done
 ```
 
-## Expected Detection
+Snort rule `1000007`, revision 2, was configured with `detection_filter:track by_src, count 20, seconds 10`.
 
-- **Snort rule ID:** `1000007`
-- **Expected alert:** `LAB5 UDP Traffic Detected`
+The expected alert was:
 
-## Verification
+```text
+Possible UDP Flood Detected
+```
 
-On Ubuntu, check the Snort alert log:
+On Ubuntu, the generated alerts can be checked with:
 
 ```bash
-sudo grep -F 'LAB5 UDP Traffic Detected' /var/log/snort/snort.alert.fast | tail -5
+sudo grep 'Possible UDP Flood Detected' /var/log/snort/snort.alert.fast | tail -10
 ```
 
-Then verify that the corresponding event appears in Elasticsearch using Kibana Discover or Dev Tools.
+## 4. Results
 
-## Result
+Snort generated two alerts with identifier `[1:1000007:2]`, showing UDP packets from Kali Linux to destination port 9999. The indexed UDP flood event should be confirmed in Kibana before final submission.
 
-Snort generated the UDP alert, and Elasticsearch indexed the event with parsed network fields.
+## 5. Evidence
 
-## Evidence
+### Traffic generated from Kali Linux
 
-### Evidence 1
+![Traffic generated from Kali Linux](../../docs/screenshots/scenario-05-ping-kali.png)
 
-![Scenario 05 evidence 1](../../docs/screenshots/scenario-05-ping-kali.png)
+### Snort alert output
 
-### Evidence 2
+![Snort alert output](../../docs/screenshots/scenario-05-udp-snort.png)
 
-![Scenario 05 evidence 2](../../docs/screenshots/scenario-05-udp-snort.png)
+### Kibana / Elasticsearch evidence
 
-### Evidence 3
+![Kibana / Elasticsearch evidence](../../docs/screenshots/scenario-05-udp-kibana.png)
 
-![Scenario 05 evidence 3](../../docs/screenshots/scenario-05-udp-kibana.png)
+## 6. Limitations
 
-## Limitations
+This test identifies an elevated packet rate in a controlled burst. It does not establish that the target became unavailable.
 
-This test validates the UDP detection rule but does not represent a specific intrusion technique.
+The rule detects matching traffic patterns. An alert alone is not proof of malicious intent.
 
 [Back to the main README](../../README.md)

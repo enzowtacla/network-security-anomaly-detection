@@ -2,7 +2,7 @@
 
 ## 1. Overview
 
-Focused on building a network security monitoring system capable of detecting certain types of network activity, collecting alerts, and making the results available for analysis.
+The project focused on building a network security monitoring system capable of detecting certain types of network activity, collecting alerts, and making the results available for analysis.
 
 The laboratory environment combined Snort, syslog-ng, Filebeat, Elasticsearch, and Kibana. Each tool handled a different part of the monitoring process, from traffic detection to log storage and visualization.
 
@@ -10,17 +10,17 @@ Kali Linux was used to generate controlled network traffic across five test scen
 
 ## 2. Detection Results
 
-All five scenarios produced the expected Snort alerts, and the corresponding events were found in Elasticsearch.
+All five scenarios produced the expected Snort alerts during the laboratory tests.
 
-The ICMP test used rule `1000002` to detect ping requests, while rule `1000003` monitored TCP SYN packets during a port scan. The scan covered ports 20 through 100 and generated 81 alerts, one for each scanned port.
+The ICMP scenario used rule `1000002`, revision 2, to detect a short burst of echo requests exceeding 20 packets within 10 seconds. A test using 30 ping requests triggered multiple alerts. The events were also found in Elasticsearch with the expected structured fields.
 
-The SSH and FTP scenarios used rules `1000004` and `1000005` to identify repeated connection attempts to ports 22 and 21. Both tests triggered the configured threshold-based rules.
+Rule `1000003` monitored TCP SYN packets during a scan of ports 20 through 100. The scan generated 81 alerts, one for each port included in the test.
 
-Although the alert messages refer to possible brute-force attacks, these tests did not involve password guessing or authentication failures. The rules only detected repeated TCP connection attempts, which can also occur during legitimate network activity.
+The SSH and FTP scenarios used rules `1000004` and `1000005` to identify repeated connection attempts to ports 22 and 21. Both tests triggered their configured thresholds. Although the alert messages refer to possible brute-force attacks, no password guessing or authentication failures were involved.
 
-The final scenario used rule `1000007` to detect UDP traffic sent to port 9999. Like the ICMP test, it was mainly intended to verify that Snort could identify packets matching a custom rule rather than simulate a specific intrusion technique.
+The final scenario used rule `1000007`, revision 2, to detect elevated UDP traffic sent to port 9999. A controlled sequence of 30 messages generated two Snort alerts. This confirms the threshold rule was triggered, but not that a service was disrupted.
 
-These results confirmed that the five detection rules worked under the conditions tested in the laboratory.
+The results show that the configured rules detected the selected traffic patterns. The ICMP and UDP scenarios represent short, controlled bursts rather than sustained denial-of-service attacks.
 
 ## 3. Log Collection and Processing
 
@@ -74,7 +74,7 @@ This means that an alert does not necessarily confirm an intrusion attempt. Addi
 
 All tests were performed in a controlled virtual network using traffic generated from Kali Linux.
 
-The five scenarios were useful for verifying the detection rules and the log processing workflow, but they do not represent the full range of techniques used in real network attacks.
+The five scenarios were useful for verifying the detection rules and the log processing workflow, but they do not represent the full range of techniques used in real network attacks. The ICMP and UDP tests used short bursts of traffic and did not measure service availability or system exhaustion.
 
 The SSH and FTP tests, for example, focused on repeated connection attempts without performing authentication attempts.
 
@@ -114,7 +114,7 @@ Finally, collecting network traffic over longer periods and testing the system u
 
 This project demonstrated how network traffic detection, centralized log collection, and security event visualization can be combined into a single monitoring system.
 
-The five test scenarios produced the expected Snort alerts, and the corresponding events were successfully processed and stored in Elasticsearch. Kibana provided a convenient way to examine the collected information and compare the results.
+The five test scenarios produced the expected Snort alerts. The log processing workflow was verified in Elasticsearch, including the structured ICMP flood events. Kibana provided a way to examine the collected information and compare the results.
 
 The main outcome of the project was a functional monitoring pipeline connecting Snort, syslog-ng, Filebeat, Elasticsearch, and Kibana.
 
