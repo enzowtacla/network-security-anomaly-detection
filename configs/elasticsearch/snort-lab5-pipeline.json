@@ -1,5 +1,5 @@
 {
-  "description": "Parse syslog-ng Snort alerts and recover event time (Lab 5)",
+  "description": "Parse Snort fast alerts collected by syslog-ng (with or without classification)",
   "processors": [
     {
       "grok": {
@@ -13,7 +13,8 @@
       "grok": {
         "field": "message",
         "patterns": [
-          "%{GREEDYDATA:snort.raw_prefix}\\[\\*\\*\\] \\[Classification: %{DATA:snort.classification}\\] \\[Priority: %{INT:snort.priority}\\]%{GREEDYDATA:snort.raw_suffix}"
+          "%{GREEDYDATA:snort.raw_prefix}\\[\\*\\*\\] \\[Classification: %{DATA:snort.classification}\\] \\[Priority: %{INT:snort.priority}\\]%{GREEDYDATA:snort.raw_suffix}",
+          "%{GREEDYDATA:snort.raw_prefix}\\[\\*\\*\\] \\[Priority: %{INT:snort.priority}\\]%{GREEDYDATA:snort.raw_suffix}"
         ]
       }
     },
@@ -21,7 +22,7 @@
       "grok": {
         "field": "snort.raw_prefix",
         "patterns": [
-          "%{GREEDYDATA}\\[\\*\\*\\] \\[%{DATA:snort.rule_id}\\] %{GREEDYDATA:snort.alert_type} "
+          "%{GREEDYDATA}\\[\\*\\*\\] \\[%{DATA:snort.rule_id}\\] %{DATA:snort.alert_type} $"
         ]
       }
     },
@@ -43,10 +44,9 @@
         "source": "def received = java.time.Instant.parse(ctx['@timestamp']); int year = received.atZone(java.time.ZoneOffset.UTC).getYear(); int month = Integer.parseInt(ctx.snort.month); int day = Integer.parseInt(ctx.snort.day); def time = java.time.LocalTime.parse(ctx.snort.event_time); def date = java.time.LocalDate.of(year, month, day); def event = date.atTime(time).toInstant(java.time.ZoneOffset.UTC); if (event.isAfter(received.plusSeconds(86400))) { event = date.minusYears(1).atTime(time).toInstant(java.time.ZoneOffset.UTC); } ctx.snort.event_timestamp = event.toString();"
       }
     },
-    {"date": {"field": "snort.event_timestamp", "target_field": "snort.event_timestamp", "formats": ["ISO8601"], "timezone": "UTC"}},
     {"remove": {"field": ["snort.raw_prefix", "snort.raw_suffix", "snort.month", "snort.day", "snort.event_time"], "ignore_missing": true}}
   ],
   "on_failure": [
-    {"set": {"field": "snort.parse_error", "value": "{{ _ingest.on_failure_message }}"}}
+    {"set": {"field": "error.message", "value": "Snort pipeline failed: {{{ _ingest.on_failure_message }}}"}}
   ]
 }
