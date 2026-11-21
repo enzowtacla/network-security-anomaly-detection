@@ -72,7 +72,7 @@ In addition to checking whether Snort could identify the traffic, each test also
 
 The first scenario examined whether Snort could identify a short burst of ICMP echo requests from Kali Linux to Ubuntu at `192.168.152.130`.
 
-Rule `1000002`, revision 2, used `detection_filter` to identify traffic exceeding 20 matching packets from one source within 10 seconds. We generated 30 requests using `ping -c 30 -i 0.2 192.168.152.130`.
+Rule `1000002`, revision 2, used `detection_filter` to identify traffic exceeding 20 matching packets from one source within 10 seconds. Were generated 30 requests using `ping -c 30 -i 0.2 192.168.152.130`.
 
 Snort generated the alert `Possible ICMP Flood Detected`. Events with the identifier `1:1000002:2` were also retrieved from Elasticsearch with the expected source, destination, and protocol fields.
 
@@ -86,7 +86,7 @@ The second scenario involved a TCP port scan using Nmap.
 
 Ports 20 through 100 were scanned on the Ubuntu machine to generate SYN packets associated with port scanning activity.
 
-Snort rule `1000003` was configured to detect this traffic. During the test, 81 alerts were generated, corresponding to the 81 scanned ports.
+Snort rule `1000003` was configured to detect this traffic. During the test, 81 alerts re generated, corresponding to the 81 scanned ports.
 
 The alerts were also found in Elasticsearch, confirming that the detection and log forwarding process worked for this type of traffic.
 
@@ -114,7 +114,7 @@ As with the SSH scenario, the detection focuses on repeated connection attempts.
 
 The final scenario examined repeated UDP traffic sent from Kali Linux to port 9999 on Ubuntu.
 
-Rule `1000007`, revision 2, used `detection_filter` to identify more than 20 matching packets from the same source within 10 seconds. We generated 30 short UDP messages using a shell loop and `nc`.
+Rule `1000007`, revision 2, used `detection_filter` to identify more than 20 matching packets from the same source within 10 seconds. Were generated 30 short UDP messages using a shell loop and `nc`.
 
 Snort produced two alerts with identifier `1:1000007:2` and the message `Possible UDP Flood Detected`. The alerts showed the expected source and destination addresses and destination port 9999.
 
