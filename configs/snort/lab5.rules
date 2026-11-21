@@ -3,3 +3,4 @@
 # Ubuntu Snort: 192.168.152.20
 
 alert icmp 192.168.152.10 any -> 192.168.152.20 any (msg:"LAB5 - ICMP Ping Detected"; itype:8; sid:1000101; rev:1;)
+alert udp any any -> $HOME_NET 9999 (msg:"LAB5 UDP Traffic Detected"; sid:1000007; rev:1;)
