@@ -9,6 +9,7 @@ filebeat.inputs:
 
 output.elasticsearch:
   hosts: ["https://192.168.56.1:9200"]
+  pipeline: snort-lab5-pipeline
   preset: balanced
 
   username: "${ES_USERNAME}"
