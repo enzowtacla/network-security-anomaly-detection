@@ -1,32 +1,34 @@
 # Lab 5: Network Security Anomaly Detection and Log Management
 
-This project was developed during Lab 5 at ESIGELEC. The objective was to build a network monitoring system capable of detecting suspicious traffic, collecting security alerts, and making them available for analysis.
+This project was developed as part of Lab 5 at ESIGELEC. The main objective was to build a network security monitoring system capable of detecting suspicious traffic, collecting alerts, and making the results available for analysis.
 
-We used Snort for traffic detection, syslog-ng and Filebeat for log collection and forwarding, and Elasticsearch and Kibana for storing and visualizing the results. To test the system, we generated different types of network traffic from a Kali Linux machine.
+The system uses Snort for network traffic detection, syslog-ng and Filebeat for log collection and forwarding, and Elasticsearch and Kibana for storing and visualizing security events.
 
-We focused on five scenarios: ICMP ping detection, TCP port scanning, repeated SSH and FTP connection attempts, and UDP traffic detection. All five tests produced the expected Snort alerts, which were also found in Elasticsearch.
+To evaluate the setup, different types of network traffic were generated from Kali Linux. Five scenarios were tested, covering ICMP, TCP port scanning, SSH and FTP connection anomalies, and UDP traffic.
+
+All five scenarios produced the expected alerts, which were successfully collected and indexed in Elasticsearch.
 
 ## 1. Technologies Used
 
-The system was built using several tools that handle different parts of the monitoring process.
+The project combines several tools to handle network monitoring and log management.
 
-Snort was responsible for inspecting network traffic and generating alerts based on our detection rules. We used syslog-ng to collect these alerts and Filebeat 9.5.6 to forward them to Elasticsearch 9.5.6.
+Snort is responsible for inspecting network traffic and generating alerts when packets match the configured detection rules. syslog-ng collects these alerts, while Filebeat 9.5.6 forwards them to Elasticsearch 9.5.6.
 
-Elasticsearch handled log storage and processing, while Kibana 9.5.6 provided an interface to search and visualize the collected data.
+Elasticsearch handles log processing and storage, and Kibana 9.5.6 provides an interface for searching and visualizing the collected events.
 
-For the laboratory environment, we used three machines:
+The laboratory environment consists of three machines:
 
-- **Kali Linux:** Generated the traffic used during testing.
-- **Ubuntu Linux:** Ran Snort, syslog-ng, and Filebeat.
-- **Linux Mint:** Hosted Elasticsearch and Kibana.
+- **Kali Linux:** Used to generate network traffic during testing.
+- **Ubuntu Linux:** Runs Snort, syslog-ng, and Filebeat.
+- **Linux Mint:** Hosts Elasticsearch and Kibana.
 
-This setup allowed us to separate traffic generation, intrusion detection, and log analysis.
+This configuration separates traffic generation, intrusion detection, and log analysis into different parts of the environment.
 
 ## 2. System Architecture
 
-We divided the system into two main parts. The first handles network traffic detection, while the second collects, processes, and displays the generated alerts.
+The system was designed to separate network traffic detection from log collection, processing, and visualization.
 
-The architecture follows this workflow:
+The architecture follows the workflow shown below:
 
 ```mermaid
 flowchart TD
@@ -46,158 +48,180 @@ flowchart TD
     F --> G
 ```
 
-Kali Linux generates the traffic, which is then inspected by Snort running on Ubuntu. When a packet matches one of the configured rules, Snort creates an alert and writes it to a log file.
+Kali Linux generates the network traffic used during testing. This traffic is inspected by Snort running on the Ubuntu machine. When a packet matches one of the configured rules, Snort generates an alert and writes it to a log file.
 
-syslog-ng collects the alerts and saves them in a dedicated file. Filebeat reads this file and sends new events to Elasticsearch, where a custom ingest pipeline extracts information such as IP addresses, protocols, and rule identifiers.
+The alerts are then collected by syslog-ng and saved in a dedicated file. Filebeat monitors this file and forwards new events to Elasticsearch, where a custom ingest pipeline extracts relevant information from each alert.
 
-Once the events are indexed, we can access them through Kibana.
+Once indexed, the events can be searched and visualized through Kibana.
 
 ### Network Configuration
 
-Kali Linux was configured with the address `192.168.152.131`, while the Ubuntu machine used `192.168.152.130` for laboratory traffic.
+Kali Linux uses the IP address `192.168.152.131`, while the Ubuntu machine uses `192.168.152.130` for laboratory traffic.
 
-Ubuntu also had a second interface at `192.168.56.20`, which allowed it to communicate with the Linux Mint host at `192.168.56.1`. Kibana was accessed locally on Linux Mint through `127.0.0.1`.
+Ubuntu also has a second network interface configured with `192.168.56.20`, allowing communication with the Linux Mint host at `192.168.56.1`. Kibana is accessed locally on Linux Mint through `127.0.0.1`.
 
-We used separate network interfaces on Ubuntu for laboratory traffic, host communication, and internet access. This made it easier to manage the environment and keep the different types of traffic separated.
+Separate network interfaces are used on Ubuntu for laboratory traffic, communication with the host, and internet access. This configuration keeps the different network connections organized and allows the monitoring components to communicate.
 
 ## 3. Detection Scenarios
 
-To check whether the monitoring system worked correctly, we created five test scenarios. Each one targeted a different type of network activity and used a custom Snort rule.
+Five detection scenarios were configured to evaluate the monitoring system. Each scenario focuses on a different type of network traffic and uses a custom Snort rule.
 
-The objective was not only to verify that Snort could detect the traffic, but also to confirm that the alerts reached Elasticsearch.
+In addition to checking whether Snort could identify the traffic, each test also verified that the generated alerts were correctly forwarded to Elasticsearch.
 
 ### Scenario 01: ICMP Ping Detection
 
-We started with a simple ICMP test. From Kali Linux, we sent ping requests to the Ubuntu machine at `192.168.152.130`.
+The first scenario focused on ICMP traffic. Ping requests were sent from Kali Linux to the Ubuntu machine at `192.168.152.130`.
 
-A custom Snort rule with SID `1000002` was configured to detect these packets and generate the message `Someone is pinging`.
+A custom Snort rule with SID `1000002` was configured to detect ICMP echo requests and generate the alert message `Someone is pinging`.
 
-Snort detected the requests, and we were able to find the corresponding events in Elasticsearch. This first test helped us check that the detection and log forwarding process was working before moving on to other scenarios.
+The traffic was detected as expected, and the corresponding alerts were found in Elasticsearch.
+
+This initial test confirmed that Snort was monitoring the network interface correctly and that the log collection process was functioning.
 
 ### Scenario 02: TCP Port Scanning
 
-For the second test, we used Nmap to scan TCP ports 20 to 100 on the Ubuntu machine.
+The second scenario involved a TCP port scan using Nmap.
 
-We wanted to see whether Snort could identify the SYN packets sent during a port scan. The rule used for this scenario had SID `1000003`.
+Ports 20 through 100 were scanned on the Ubuntu machine to generate SYN packets associated with port scanning activity.
 
-The scan generated 81 alerts, which matched the number of ports tested. We then checked Elasticsearch and confirmed that these alerts had been indexed.
+Snort rule `1000003` was configured to detect this traffic. During the test, 81 alerts were generated, corresponding to the 81 scanned ports.
+
+The alerts were also found in Elasticsearch, confirming that the detection and log forwarding process worked for this type of traffic.
 
 ### Scenario 03: SSH Connection Anomaly
 
-In this scenario, we generated repeated TCP connection attempts to port 22.
+This scenario tested the detection of repeated TCP connection attempts to port 22, commonly used by SSH.
 
-We used a threshold-based Snort rule with SID `1000004` to detect multiple SYN packets within a short period.
+A threshold-based Snort rule with SID `1000004` was configured to identify multiple SYN packets within a short period.
 
-The rule triggered as expected, and the alerts appeared in Elasticsearch.
+Repeated connection attempts were generated from Kali Linux, and the rule triggered as expected. The resulting alerts were also indexed in Elasticsearch.
 
-One important detail is that this test only detects repeated connection attempts. It does not confirm that someone was trying to guess SSH passwords, since we did not analyze authentication failures.
+It is important to note that this rule detects unusual connection patterns rather than actual SSH authentication attacks. Repeated SYN packets alone are not enough to confirm a password brute-force attempt.
 
 ### Scenario 04: FTP Connection Anomaly
 
-The FTP test followed a similar approach. We generated repeated connection attempts from Kali Linux, this time targeting TCP port 21.
+The fourth scenario followed a similar approach, targeting TCP port 21, which is commonly associated with FTP.
 
-Our Snort rule, identified by SID `1000005`, monitored the connection attempts and generated an alert when the configured threshold was reached.
+Repeated connection attempts were generated from Kali Linux, and Snort rule `1000005` was used to detect activity exceeding a predefined threshold.
 
-We confirmed that the alerts were created and forwarded correctly.
+The rule generated the expected alerts, which were successfully forwarded to Elasticsearch.
 
-As with SSH, the rule detects connection patterns rather than actual login attempts. This distinction is important because repeated connections do not always indicate malicious activity.
+As with the SSH scenario, the detection focuses on repeated connection attempts. It does not analyze FTP login failures or confirm that an authentication attack occurred.
 
 ### Scenario 05: UDP Traffic Detection
 
-For the last scenario, we sent a UDP packet to port 9999 on the Ubuntu machine.
+The final scenario focused on UDP traffic.
 
-We created a custom Snort rule with SID `1000007` to identify this packet.
+A UDP packet was sent from Kali Linux to port 9999 on the Ubuntu machine. A custom Snort rule with SID `1000007` was configured to identify this traffic.
 
-The test worked as expected, and the resulting alert was stored in Elasticsearch.
+Snort detected the packet and generated an alert, which was later found in Elasticsearch.
 
-This scenario was mainly intended to verify UDP detection. Unlike the SSH and FTP scenarios, it was not designed to represent a particular attack.
+This scenario was mainly used to verify UDP traffic detection. It does not simulate a specific intrusion technique.
 
 ## 4. Log Collection and Processing
 
-After configuring the detection rules, we needed a way to collect the alerts and store them in a format that would be useful for analysis.
+After configuring the detection rules, the next part of the project involved collecting the generated alerts and preparing them for analysis.
 
-Snort writes its alerts to `/var/log/snort/snort.alert.fast`. We configured syslog-ng to collect them and save them in `/var/log/lab5/snort-collected.log`.
+Snort stores its alerts in `/var/log/snort/snort.alert.fast`. syslog-ng was configured to collect these entries and write them to `/var/log/lab5/snort-collected.log`.
 
-Filebeat monitors this second file and forwards the events to Elasticsearch over HTTPS.
+Filebeat monitors the collected log file and forwards new events to Elasticsearch using HTTPS.
 
-On the Elasticsearch side, we created an ingest pipeline called `snort-lab5-pipeline`. Its purpose is to extract information from the raw Snort messages and organize it into separate fields.
+An Elasticsearch ingest pipeline named `snort-lab5-pipeline` was created to process the incoming alerts.
 
-For example, the pipeline identifies the rule ID, alert type, protocol, source and destination IP addresses, and alert priority. It also extracts port numbers when they are present.
+The pipeline extracts information from the raw Snort messages and stores it in structured fields. These include the rule identifier, alert type, network protocol, source and destination IP addresses, alert priority, and port numbers when available.
 
-The main fields include `snort.rule_id`, `snort.alert_type`, `snort.protocol`, `snort.source_ip`, `snort.destination_ip`, `snort.source_port`, `snort.destination_port`, and `snort.priority`.
+The main fields are:
 
-We had to account for differences between Snort alert formats. Some alerts include classification information, while others do not. ICMP alerts also differ from TCP and UDP alerts because they do not contain source and destination ports.
+- `snort.rule_id`
+- `snort.alert_type`
+- `snort.protocol`
+- `snort.source_ip`
+- `snort.destination_ip`
+- `snort.source_port`
+- `snort.destination_port`
+- `snort.priority`
 
-The pipeline was configured to handle these cases so that the collected events could be processed correctly.
+The pipeline also handles differences between Snort alert formats. Some alerts contain classification information, while others do not. ICMP alerts require additional handling because they do not include source and destination port numbers.
 
-All configuration files related to this part of the project are available in the `configs/` directory.
+This processing makes the data easier to search and filter in Elasticsearch and allows the extracted fields to be used in Kibana visualizations.
+
+The configuration files are available in the `configs/` directory.
 
 ## 5. Kibana Dashboard
 
-Once the alerts were being indexed correctly, we created a dashboard in Kibana called **Snort Security Monitoring**.
+A custom Kibana dashboard named **Snort Security Monitoring** was created to provide an overview of the collected security alerts.
 
-We wanted a simple way to review the results of our tests without having to search through log files or manually inspect individual Elasticsearch documents.
+The dashboard makes it possible to examine the results without manually searching through raw log files.
 
-The dashboard contains six visualizations covering the total number of alerts, alert activity over time, alert types, protocols, priorities, and source IP addresses.
+It contains six panels:
 
-The time-based chart helps us see when the tests generated the most activity. The other visualizations make it easier to compare the different scenarios and understand which rules were triggered.
+1. Total Snort Alerts
+2. Snort Alerts Over Time
+3. Snort Alert Types
+4. Alerts by Protocol
+5. Alerts by Priority
+6. Top Source IPs
 
-We also included a panel showing the most frequent source IP addresses, which is useful for identifying where the detected traffic originated.
+The time-based visualization shows how alert activity changes during testing. The other panels help identify which detection rules were triggered, which protocols were involved, and where the traffic originated.
+
+The dashboard also makes it easier to compare the results of different scenarios and verify that the information extracted by the ingest pipeline is available for analysis.
 
 ### Dashboard Screenshot
 
 ![Snort Security Monitoring Dashboard](docs/screenshots/snort-security-dashboard.png)
 
-The dashboard was exported to `dashboards/snort-security-monitoring.ndjson` so that it can be imported into another Kibana installation.
+The dashboard configuration was exported to `dashboards/snort-security-monitoring.ndjson` and can be imported into another Kibana installation.
 
 ## 6. Project Files and Documentation
 
-We organized the repository to keep the configuration files separate from the test documentation.
+The repository is organized into separate directories for configuration files, test documentation, screenshots, and supporting scripts.
 
-The `configs/` directory contains the Snort rules, syslog-ng configuration, Filebeat configuration, Elasticsearch ingest pipeline, and Ubuntu network settings. Each component has its own subdirectory.
+The `configs/` directory contains the configuration files for Snort, syslog-ng, Filebeat, Elasticsearch, and Ubuntu networking. Each component has its own subdirectory.
 
-The Kibana dashboard export is stored in `dashboards/`, while `scenarios/` contains the documentation for the five detection tests.
+The `dashboards/` directory stores the Kibana dashboard export, while `scenarios/` contains documentation for the five detection scenarios.
 
-We also created `docs/screenshots/` to store screenshots of the tests and dashboard. Supporting scripts are kept in `scripts/`.
+Screenshots of the tests and dashboard are stored in `docs/screenshots/`, and additional scripts are available in `scripts/`.
 
-The repository includes documentation for Filebeat and Elasticsearch integration, along with separate files covering the ICMP, TCP scan, SSH, FTP, and UDP scenarios.
+The repository also includes documentation covering Filebeat and Elasticsearch integration, along with individual files for the ICMP, TCP scan, SSH, FTP, and UDP tests.
 
-A more detailed installation guide, testing guide, and results analysis are planned as separate documents.
+More detailed installation instructions, testing procedures, and results analysis are planned as separate documents.
 
 ## 7. Results
 
-The five scenarios produced the expected results. In every test, Snort detected the traffic according to our rules, and we confirmed that the corresponding alerts were present in Elasticsearch.
+All five detection scenarios produced the expected results.
 
-The TCP port scan generated 81 alerts. The SSH and FTP tests showed that threshold-based rules could identify repeated connection attempts, while the ICMP and UDP tests confirmed that our rules could also detect those protocols.
+Snort detected the generated traffic according to the configured rules, and the corresponding alerts were found in Elasticsearch.
 
-We also verified the log processing part of the system. The custom Elasticsearch pipeline extracted structured fields from the Snort messages, making it possible to filter and analyze the events in Kibana.
+The TCP port scanning test generated 81 alerts. The SSH and FTP scenarios demonstrated that threshold-based rules could identify repeated TCP connection attempts, while the ICMP and UDP tests confirmed that the system could detect those protocols using custom rules.
 
-Having the alerts available in a dashboard made the results easier to understand. Instead of looking at individual log entries, we could compare alert types, protocols, and activity over time.
+The log processing configuration also worked as expected. The Elasticsearch ingest pipeline extracted structured information from the alerts, allowing the events to be filtered and analyzed in Kibana.
 
-These tests confirmed that the different components were communicating correctly and that the monitoring system worked for the traffic generated in our laboratory environment.
+The dashboard provided a clearer view of the collected data by grouping alerts according to their type, protocol, priority, and source IP address.
+
+These results confirm that the main components of the monitoring system communicate correctly and that the detection rules work for the traffic generated during the laboratory tests.
 
 ## 8. Limitations and Future Improvements
 
-Although the system worked during our tests, it still has some limitations.
+The system was developed and tested in a controlled virtual environment. Its behavior under production network conditions or higher traffic volumes has not yet been evaluated.
 
-The main one is that everything was tested in a controlled virtual network. We did not evaluate the system with real production traffic or under heavy network load.
+Another limitation is the simplicity of some detection rules. Certain network patterns may appear suspicious without necessarily indicating malicious activity.
 
-The detection rules are also relatively simple. Some of them identify traffic that may look suspicious but is not necessarily malicious.
+For example, repeated SYN packets to SSH or FTP ports can suggest unusual connection behavior, but they do not confirm that a brute-force attack is taking place. Detecting authentication attacks more accurately would require additional rules or analysis of authentication logs.
 
-For example, repeated SYN packets to SSH or FTP ports can indicate unusual connection activity, but they do not prove that a brute-force attack is taking place. Detecting actual authentication attacks would require more specific rules or information from authentication logs.
+The UDP scenario also focuses on detecting a specific type of traffic rather than identifying a known attack technique.
 
-The UDP test is another example. It confirms that Snort can detect UDP packets matching our rule, but it does not identify a particular intrusion technique.
+Future improvements could include more precise detection rules, automatic notifications for important events, and additional scenarios involving other network protocols.
 
-If we continue developing this project, one improvement would be to create more precise detection rules and reduce unnecessary alerts. We could also add automatic notifications for important events, test additional protocols, and evaluate how the system performs with larger amounts of traffic.
-
-Improving alert classification and prioritization would also help make the dashboard more useful for security monitoring.
+Testing the system with larger traffic volumes would also help evaluate its performance. Improving alert classification and prioritization could make the monitoring dashboard more useful for identifying potentially malicious activity.
 
 ## 9. Conclusion
 
-In this lab, we built a network monitoring and log management system using Snort, syslog-ng, Filebeat, Elasticsearch, and Kibana.
+This project demonstrated how network intrusion detection and centralized log management can be combined into a single monitoring system.
 
-We tested the setup using five different traffic scenarios and confirmed that the alerts generated by Snort could be collected, processed, stored, and visualized.
+Snort, syslog-ng, Filebeat, Elasticsearch, and Kibana were integrated to detect network activity, collect alerts, process the resulting logs, and present the information through a dashboard.
 
-The project helped us understand how network intrusion detection and centralized log management can work together. It also gave us practical experience configuring the different tools and troubleshooting the connections between them.
+The five test scenarios confirmed that the configured detection rules worked and that the generated alerts could be stored and analyzed in Elasticsearch.
 
-The current system is still a laboratory prototype, but it provides a foundation for exploring more advanced detection rules, alert management, and network security monitoring.
+The project also provided practical experience with network monitoring, log processing, and the integration of different security tools.
+
+Although the system is currently limited to a laboratory environment, it provides a foundation for further development, particularly in improving detection accuracy, alert management, and security monitoring capabilities.
