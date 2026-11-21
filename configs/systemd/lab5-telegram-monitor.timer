@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Lab 5 Telegram Alert Monitor Every 30 Seconds
+
+[Timer]
+OnBootSec=30s
+OnUnitInactiveSec=30s
+AccuracySec=1s
+Unit=lab5-telegram-monitor.service
+
+[Install]
+WantedBy=timers.target

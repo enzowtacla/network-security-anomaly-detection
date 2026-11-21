@@ -1,0 +1,7 @@
+[Unit]
+Description=Lab 5 Telegram Security Alert Monitor
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/ESIGELEC/Security/Lab5
+ExecStart=/usr/bin/python3 %h/ESIGELEC/Security/Lab5/scripts/telegram_alert_monitor.py

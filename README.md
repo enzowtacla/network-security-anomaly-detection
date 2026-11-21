@@ -229,3 +229,31 @@ The five test scenarios confirmed that the configured detection rules worked and
 The project also provided practical experience with network monitoring, log processing, and the integration of different security tools.
 
 Although the system is currently limited to a laboratory environment, it provides a foundation for further development, particularly in improving detection accuracy, alert management, and security monitoring capabilities.
+
+## Automated Telegram Notifications
+
+The monitoring environment includes automated Telegram notifications for Snort security alerts.
+
+A Python script queries Elasticsearch for recent alerts, groups events by detection rule and source/destination IP addresses, and sends notifications through a Telegram bot.
+
+A systemd user timer executes the monitor approximately every 30 seconds.
+
+### Components
+
+- Python alert monitor: `scripts/telegram_alert_monitor.py`
+- systemd service: `configs/systemd/lab5-telegram-monitor.service`
+- systemd timer: `configs/systemd/lab5-telegram-monitor.timer`
+- Local configuration: `scripts/.env` (not tracked by Git)
+- Notification state: `scripts/.telegram_alert_state.json` (not tracked by Git)
+
+### Validation
+
+The notification system was validated using the ICMP Flood scenario.
+
+The initial test successfully delivered 10 individual notifications. After implementing event grouping, a repeated test produced a single grouped notification.
+
+Automatic delivery was also confirmed with the systemd timer, without manually executing the Python script.
+
+### Documentation
+
+See [Telegram Security Notifications](docs/telegram-notifications.md) for configuration details, architecture, validation results, screenshots, and limitations.
